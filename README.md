@@ -23,6 +23,9 @@ Then open http://localhost:3000.
 | `npm run typecheck`    | Run the TypeScript compiler |
 | `npm run format`       | Format files with Prettier  |
 | `npm run format:check` | Check formatting            |
+| `npm run check`        | Run all checks and tests    |
+
+A pre-commit hook checks formatting, lint and types on every commit.
 
 ## Assumptions
 
