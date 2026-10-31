@@ -57,3 +57,44 @@ A pre-commit hook checks formatting, lint and types on every commit.
 
 - There's no refresh or resume support, because the API can't return saved progress and form data isn't stored in the browser. Refreshing, including from the confirmation view, returns an empty form.
 - Only step 1 exists, and the parent tracks completion with true/false state. Adding steps would change that state, and a Back button would also mean moving form values up into the parent.
+
+## Decisions and trade-offs
+
+**Client component with `fetch`, not Server Actions.** There are no secrets to protect and the API allows browser calls, so a Server Action would only add an extra server hop.
+
+**React Hook Form and Zod.** The schema is the single source for the format rules, and the form takes its types from it.
+
+**The corporation number check runs separately from the schema.** Putting it in Zod would run the API check on every validation, including when other fields blur. Its result is kept in the hook, because React Hook Form clears manually set errors when it validates the field again.
+
+**One map of promises for checks.** A running check and a finished one are the same promise, so blur and submit share one function, and clicking Submit during a check doesn't send a second GET. Failed checks are removed so they can be retried.
+
+**Stale responses are ignored, not cancelled.** A late response is still correct for its own number, so it stays saved but only updates the field if that number is still current. Cancelling would also risk aborting a request that a submit is waiting on.
+
+**Submit stays enabled during a check.** Blur fires on mouse press and the click completes on release, so disabling the button during the check would lose the click. It's disabled only while submitting. Space for errors is reserved so the button doesn't move mid-click.
+
+**libphonenumber-js and a strict format check.** The library resolves the country from the area code, which is the only way to separate Canadian numbers from US ones without maintaining a list. It adds about 29 KB gzipped, and it rejects toll-free numbers.
+
+**10-second timeout on both requests.** Without it, a hung request would leave the form stuck on "Submitting...". The trade-off is that a timed-out POST may still have succeeded on the server, so a retry could submit twice.
+
+**Simple state in `OnboardingFlow`.** It holds a true/false state because only one step exists. A step registry would be an abstraction with a single use. Adding a step changes this state, and the layout stays as it is.
+
+**Tests go through the form.** Integration tests with React Testing Library and MSW cover the behaviour and survive refactors. The schema has its own tests because the phone rules have many cases. I chose Vitest because it needs little setup for `fetch` and MSW.
+
+**The API URL is an env variable.** Each environment can set its own. It isn't a secret: it's `NEXT_PUBLIC_` because the browser calls the API directly, and the QA value is in `.env.example` so setup is one copy command.
+
+## How AI was used
+
+I built this with Claude Code as a pair programmer. It wrote most of the code and tests and suggested options with trade-offs.
+
+I made the design decisions: the stack, how the corporation number check behaves (saved results, in-flight requests, stale responses and retries), phone validation, what happens after submit, and read-only inputs during submit.
+
+I reviewed each step before committing it. Tests were checked by deliberately breaking the code to confirm they fail, and the main flows were run in a browser against the real API.
+
+## What I'd do with more time
+
+- **CI:** run the checks and tests on every push. The pre-commit hook can be skipped, and CI can't.
+- **Duplicate submit protection:** an idempotency key on the POST, which needs backend support, so a retry after a timeout can't submit twice.
+- **Saved progress:** a server-side way to resume, which needs an API that returns saved data.
+- **More steps:** the step indicator, Back navigation, and form values held in the parent.
+- **Field-level server errors:** the 400 response names no field today, so a `field` property from the API would let errors appear under the right input.
+- **Browser tests:** a small Playwright test for the main flow. The current tests fake the network, so they wouldn't notice an API change.
