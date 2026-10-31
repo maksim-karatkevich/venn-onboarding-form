@@ -1,5 +1,6 @@
 import { parsePhoneNumberFromString } from "libphonenumber-js/min";
 import { z } from "zod";
+import { PERSONAL_DETAILS_FIELD } from "../types";
 
 const NAME_MAX_LENGTH = 50;
 const CORPORATION_NUMBER_LENGTH = 9;
@@ -23,14 +24,14 @@ function nameField(label: string) {
 }
 
 export const personalDetailsSchema = z.object({
-  firstName: nameField("First name"),
-  lastName: nameField("Last name"),
-  phone: z
+  [PERSONAL_DETAILS_FIELD.FIRST_NAME]: nameField("First name"),
+  [PERSONAL_DETAILS_FIELD.LAST_NAME]: nameField("Last name"),
+  [PERSONAL_DETAILS_FIELD.PHONE]: z
     .string()
     .trim()
     .min(1, "Phone number is required")
     .refine(isCanadianPhoneNumber, "Enter a Canadian number like +13062776103"),
-  corporationNumber: z
+  [PERSONAL_DETAILS_FIELD.CORPORATION_NUMBER]: z
     .string()
     .trim()
     .min(1, "Corporation number is required")

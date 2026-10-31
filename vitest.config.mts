@@ -8,6 +8,8 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
+    // Requests never leave the tests: MSW answers them at this placeholder URL.
+    env: { NEXT_PUBLIC_API_BASE_URL: "https://api.test" },
     setupFiles: ["./vitest.setup.ts"],
   },
 });
