@@ -16,6 +16,20 @@ function setup() {
 }
 
 describe("PersonalDetailsStep", () => {
+  it("marks every field as required for assistive technology", () => {
+    setup();
+
+    REQUIRED_FIELDS.forEach(([label]) => {
+      expect(screen.getByLabelText(label)).toBeRequired();
+    });
+  });
+
+  it("uses POST so a submit before hydration can't put values in the URL", () => {
+    setup();
+
+    expect(document.querySelector("form")).toHaveAttribute("method", "post");
+  });
+
   it("shows no errors before the user interacts with the form", () => {
     setup();
 

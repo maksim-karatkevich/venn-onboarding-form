@@ -173,7 +173,9 @@ describe("OnboardingFlow submit", () => {
 
       await user.click(submitButton());
       await screen.findByText(UNAVAILABLE_MESSAGE);
-      await waitFor(() => expect(submitButton()).toBeEnabled());
+      await waitFor(() =>
+        expect(submitButton()).not.toHaveAttribute("aria-disabled", "true"),
+      );
       expect(requestBodies).toEqual([]);
 
       return { user, requestedUrls, requestBodies };
@@ -208,7 +210,9 @@ describe("OnboardingFlow submit", () => {
 
       await waitFor(() => expect(requestedUrls).toHaveLength(2));
       expect(await screen.findByText(UNAVAILABLE_MESSAGE)).toBeInTheDocument();
-      await waitFor(() => expect(submitButton()).toBeEnabled());
+      await waitFor(() =>
+        expect(submitButton()).not.toHaveAttribute("aria-disabled", "true"),
+      );
       expect(requestBodies).toEqual([]);
     });
   });
@@ -227,7 +231,7 @@ describe("OnboardingFlow submit", () => {
         "Invalid phone number",
       );
       expect(screen.getByLabelText("First Name")).toHaveValue("Hello");
-      expect(submitButton()).toBeEnabled();
+      expect(submitButton()).not.toHaveAttribute("aria-disabled", "true");
       expect(screen.queryByText(CONFIRMATION)).not.toBeInTheDocument();
     });
 
@@ -236,6 +240,10 @@ describe("OnboardingFlow submit", () => {
       ["a network failure", () => HttpResponse.error()],
       ["a 400 without a message", () => HttpResponse.json({}, { status: 400 })],
       ["a 400 that isn't JSON", () => new HttpResponse("no", { status: 400 })],
+      [
+        "a 400 whose message isn't text",
+        () => HttpResponse.json({ message: { code: 1 } }, { status: 400 }),
+      ],
     ])("shows a generic message for %s", async (_description, respond) => {
       mockCheck(validResponse);
       mockSubmit(respond);
@@ -244,6 +252,27 @@ describe("OnboardingFlow submit", () => {
       await user.click(submitButton());
 
       expect(await screen.findByRole("alert")).toHaveTextContent(GENERIC_ERROR);
+    });
+
+    it("keeps focus on the button throughout, so Enter can retry", async () => {
+      mockCheck(validResponse);
+      const pendingSubmit = Promise.withResolvers<Response>();
+      const responses = [pendingSubmit.promise, submitSuccessResponse()];
+      const requestBodies = mockSubmit(() => responses.shift()!);
+      const user = await setup();
+
+      await user.click(submitButton());
+      await waitFor(() => expect(requestBodies).toHaveLength(1));
+      expect(submitButton()).toHaveFocus();
+
+      pendingSubmit.resolve(serverErrorResponse());
+      await screen.findByRole("alert");
+      expect(submitButton()).toHaveFocus();
+
+      await user.keyboard("{Enter}");
+
+      await screen.findByText(CONFIRMATION);
+      expect(requestBodies).toHaveLength(2);
     });
 
     it("clears the message and posts again on the next submit", async () => {
@@ -301,7 +330,7 @@ describe("OnboardingFlow submit", () => {
       await user.click(submitButton());
       await waitFor(() => expect(requestBodies).toHaveLength(1));
 
-      expect(submitButton()).toBeDisabled();
+      expect(submitButton()).toHaveAttribute("aria-disabled", "true");
       expect(submitButton()).toHaveTextContent("Submitting...");
       for (const label of [
         "First Name",

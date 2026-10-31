@@ -94,11 +94,12 @@ export function PersonalDetailsStep({ onComplete }: PersonalDetailsStepProps) {
   }
 
   return (
-    <form noValidate onSubmit={onSubmit}>
+    <form method="post" noValidate onSubmit={onSubmit}>
       <div className="grid gap-x-5 sm:grid-cols-2">
         <FormField
           label="First Name"
           autoComplete="given-name"
+          required
           readOnly={isSubmitting}
           error={errors[FIRST_NAME]?.message}
           {...register(FIRST_NAME)}
@@ -106,6 +107,7 @@ export function PersonalDetailsStep({ onComplete }: PersonalDetailsStepProps) {
         <FormField
           label="Last Name"
           autoComplete="family-name"
+          required
           readOnly={isSubmitting}
           error={errors[LAST_NAME]?.message}
           {...register(LAST_NAME)}
@@ -115,6 +117,7 @@ export function PersonalDetailsStep({ onComplete }: PersonalDetailsStepProps) {
         label="Phone Number"
         type="tel"
         autoComplete="tel"
+        required
         readOnly={isSubmitting}
         error={errors[PHONE]?.message}
         {...register(PHONE)}
@@ -122,17 +125,18 @@ export function PersonalDetailsStep({ onComplete }: PersonalDetailsStepProps) {
       <FormField
         label="Corporation Number"
         autoComplete="off"
+        required
         readOnly={isSubmitting}
         error={errors[CORPORATION_NUMBER]?.message ?? checkError}
         status={isChecking ? "Checking..." : undefined}
-        // The "couldn't verify" message wraps to two lines on narrow screens.
         messageClassName="min-h-10 sm:min-h-5"
         {...register(CORPORATION_NUMBER, corporationNumberOptions)}
       />
       <Button
         type="submit"
         disabled={isSubmitting}
-        className="mt-3.5 h-11.5 w-full rounded-[10px] font-normal"
+        focusableWhenDisabled
+        className="mt-3.5 h-11.5 w-full rounded-[10px] font-normal aria-disabled:opacity-50"
       >
         {isSubmitting ? (
           "Submitting..."
@@ -143,7 +147,6 @@ export function PersonalDetailsStep({ onComplete }: PersonalDetailsStepProps) {
           </>
         )}
       </Button>
-      {/* Below the button so that it can't move the button when it appears. */}
       {submitError && (
         <p role="alert" className="text-destructive mt-2 text-center text-xs">
           {submitError}

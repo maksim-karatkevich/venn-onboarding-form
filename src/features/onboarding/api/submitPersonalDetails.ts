@@ -21,7 +21,9 @@ export async function submitPersonalDetails(
 
     if (response.status === 400) {
       const { message } = await response.json();
-      if (message) return { ok: false, message };
+      if (message && typeof message === "string") {
+        return { ok: false, message };
+      }
     }
     return { ok: false, message: GENERIC_ERROR_MESSAGE };
   } catch {
