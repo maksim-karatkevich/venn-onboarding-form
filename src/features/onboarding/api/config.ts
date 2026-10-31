@@ -4,7 +4,7 @@ const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 // resulting 404 would look like an invalid corporation number.
 if (!apiBaseUrl) {
   throw new Error(
-    "NEXT_PUBLIC_API_BASE_URL is not set. Copy .env.example to .env.local and fill it in.",
+    "NEXT_PUBLIC_API_BASE_URL is not set. Copy .env.example to .env.local.",
   );
 }
 

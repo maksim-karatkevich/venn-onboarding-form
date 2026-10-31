@@ -8,6 +8,7 @@ Requires Node.js 24.15+ (see `.nvmrc`).
 
 ```bash
 npm install
+cp .env.example .env.local
 npm run dev
 ```
 
@@ -30,7 +31,7 @@ Then open http://localhost:3000.
 - An invalid corporation number returns a 404 with `{ valid: false, message }`. The spec doesn't mention the status, but I confirmed it against the API.
 - Any other failed check (network failure, timeout, 5xx or other 4xx) means "couldn't verify", not "invalid". It isn't saved, so it can be retried.
 - A successful POST returns a plain-text `OK`, so only the status is checked.
-- A 400 response names no field, so its message appears as a form-level error.
+- A 400 response names no field, so its message appears as a form-level error. Any other POST failure shows a generic form-level error and keeps the entered values.
 - Requests time out after 10 seconds and are treated as network failures.
 
 **Validation**
@@ -40,6 +41,7 @@ Then open http://localhost:3000.
 - **Corporation number:** exactly 9 characters after trimming and kept as a string. The API decides validity, so there's no digits-only check on the client.
 - **Length limits:** these show an error instead of blocking typing, so pasted text isn't silently cut off.
 - **Unverified corporation number:** this blocks the POST and asks the user to click Submit to try again.
+- **During submit:** inputs are read-only, so the values on screen always match what's sent. They aren't disabled, because that would drop focus.
 
 **Design**
 

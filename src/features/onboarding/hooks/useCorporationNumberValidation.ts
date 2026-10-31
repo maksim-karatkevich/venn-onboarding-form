@@ -21,7 +21,7 @@ export function useCorporationNumberValidation() {
   const checks = useRef(new Map<string, Promise<CorporationNumberStatus>>());
   const [check, setCheck] = useState<CorporationNumberCheck | null>(null);
 
-  function validateCorporationNumber(number: string) {
+  function getOrStartCheck(number: string) {
     const existingCheck = checks.current.get(number);
     if (existingCheck) return existingCheck;
 
@@ -36,22 +36,23 @@ export function useCorporationNumberValidation() {
     return newCheck;
   }
 
-  async function runCheck(number: string) {
+  /** Used on blur and on submit. Resolves to undefined if the format is wrong, without calling the API. */
+  async function validateCorporationNumber(value: string) {
+    const parsed =
+      personalDetailsSchema.shape[
+        PERSONAL_DETAILS_FIELD.CORPORATION_NUMBER
+      ].safeParse(value);
+    if (!parsed.success) return undefined;
+
+    const number = parsed.data;
     setCheck({ number, status: CORPORATION_NUMBER_STATUS.CHECKING });
-    const status = await validateCorporationNumber(number);
+    const status = await getOrStartCheck(number);
     // Requests aren't cancelled: a late result is still correct for its own
     // number, so it stays saved but only updates the field if it's still current.
     setCheck((current) =>
       current?.number === number ? { number, status } : current,
     );
-  }
-
-  function handleBlur(value: string) {
-    const parsed =
-      personalDetailsSchema.shape[
-        PERSONAL_DETAILS_FIELD.CORPORATION_NUMBER
-      ].safeParse(value);
-    if (parsed.success) runCheck(parsed.data);
+    return status;
   }
 
   function reset() {
@@ -61,7 +62,7 @@ export function useCorporationNumberValidation() {
   return {
     isChecking: check?.status === CORPORATION_NUMBER_STATUS.CHECKING,
     error: check ? ERROR_MESSAGES[check.status] : undefined,
-    handleBlur,
+    validateCorporationNumber,
     reset,
   };
 }

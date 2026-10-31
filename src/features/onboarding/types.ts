@@ -5,6 +5,8 @@ export const PERSONAL_DETAILS_FIELD = {
   CORPORATION_NUMBER: "corporationNumber",
 } as const;
 
+export type SubmitResult = { ok: true } | { ok: false; message: string };
+
 export const CORPORATION_NUMBER_STATUS = {
   CHECKING: "checking",
   VALID: "valid",

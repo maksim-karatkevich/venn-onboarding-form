@@ -18,6 +18,22 @@ export const invalidResponse = () =>
 export const serverErrorResponse = () =>
   new HttpResponse(null, { status: 500 });
 
+export const submitSuccessResponse = () => HttpResponse.text("OK");
+
+/** Answers with `respond` and records the JSON body of every request received. */
+export function mockSubmit(
+  respond: () => Response | Promise<Response> = submitSuccessResponse,
+) {
+  const requestBodies: unknown[] = [];
+  server.use(
+    http.post(`${API_BASE_URL}/profile-details`, async ({ request }) => {
+      requestBodies.push(await request.json());
+      return respond();
+    }),
+  );
+  return requestBodies;
+}
+
 /** Answers with `respond` and records the URL of every request received. */
 export function mockCheck(
   respond: (number: string) => Response | Promise<Response>,

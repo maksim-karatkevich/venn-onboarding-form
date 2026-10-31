@@ -11,12 +11,12 @@ import {
   serverErrorResponse,
   UNAVAILABLE_MESSAGE,
   validResponse,
-} from "@/test/corporationNumberMocks";
+} from "@/test/onboardingMocks";
 import { API_BASE_URL } from "../api/config";
 import { PersonalDetailsStep } from "./PersonalDetailsStep";
 
 function setup() {
-  render(<PersonalDetailsStep />);
+  render(<PersonalDetailsStep onComplete={() => undefined} />);
   return {
     user: userEvent.setup(),
     input: screen.getByLabelText("Corporation Number"),

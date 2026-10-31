@@ -11,7 +11,7 @@ const REQUIRED_FIELDS = [
 ];
 
 function setup() {
-  render(<PersonalDetailsStep />);
+  render(<PersonalDetailsStep onComplete={() => undefined} />);
   return userEvent.setup();
 }
 
