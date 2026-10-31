@@ -1,5 +1,54 @@
 @import "tailwindcss";
 
+/* Dark mode isn't in the design. Without this, the shadcn components' dark:
+   classes would follow the OS setting. */
+@custom-variant dark (&:is(.dark *));
+
 @theme inline {
   --font-sans: var(--font-dm-sans);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+}
+
+:root {
+  --background: #f4f4f4;
+  --foreground: #000000;
+  --card: #ffffff;
+  --primary: #000000;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f4f4;
+  --secondary-foreground: #000000;
+  --muted: #f4f4f4;
+  --muted-foreground: #6b6b6b;
+  /* Slightly darker than the design's pure red, which is below 4.5:1 on white. */
+  --destructive: #e00000;
+  --border: #e5e5e5;
+  --input: #d9dbdf;
+  --ring: #000000;
+  --radius: 0.625rem;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
 }

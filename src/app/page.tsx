@@ -1,7 +1,10 @@
+import { OnboardingLayout } from "@/features/onboarding/components/OnboardingLayout";
+import { PersonalDetailsStep } from "@/features/onboarding/components/PersonalDetailsStep";
+
 export default function Home() {
   return (
-    <main>
-      <h1>Onboarding Form</h1>
-    </main>
+    <OnboardingLayout>
+      <PersonalDetailsStep />
+    </OnboardingLayout>
   );
 }
