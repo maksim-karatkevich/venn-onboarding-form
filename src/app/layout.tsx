@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactElement } from "react";
 import { DM_Sans } from "next/font/google";
 import "./globals.css";
 
@@ -12,7 +13,9 @@ export const metadata: Metadata = {
   description: "Tell us about yourself and your business.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: LayoutProps<"/">): ReactElement {
   return (
     <html lang="en" className={`${dmSans.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">{children}</body>

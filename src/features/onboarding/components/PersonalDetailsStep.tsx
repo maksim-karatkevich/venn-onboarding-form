@@ -2,7 +2,12 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight } from "lucide-react";
-import { useState, type SubmitEvent } from "react";
+import {
+  useState,
+  type ChangeEvent,
+  type ReactElement,
+  type SubmitEvent,
+} from "react";
 import {
   useForm,
   type RegisterOptions,
@@ -39,17 +44,21 @@ type PersonalDetailsStepProps = {
   onComplete: () => void;
 };
 
-export function PersonalDetailsStep({ onComplete }: PersonalDetailsStepProps) {
+export function PersonalDetailsStep({
+  onComplete,
+}: PersonalDetailsStepProps): ReactElement {
   const {
     register,
     handleSubmit,
     clearErrors,
     getValues,
+    trigger,
     setFocus,
     formState: { errors, isSubmitting },
   } = useForm<PersonalDetails>(FORM_CONFIG);
   const {
     isChecking,
+    isInvalid: isCheckInvalid,
     error: checkError,
     validateCorporationNumber,
     reset: resetCheck,
@@ -64,12 +73,22 @@ export function PersonalDetailsStep({ onComplete }: PersonalDetailsStepProps) {
   > = {
     onBlur: ({ target }) => validateCorporationNumber(target.value),
     onChange: () => {
-      clearErrors(CORPORATION_NUMBER);
+      if (errors[CORPORATION_NUMBER]) clearErrors(CORPORATION_NUMBER);
       resetCheck();
     },
   };
 
-  async function submitDetails(details: PersonalDetails) {
+  function handleFormChange({ target }: ChangeEvent<HTMLFormElement>): void {
+    setSubmitError(null);
+
+    // Autofill changes fields without focusing them, so they never blur.
+    const autofilledField = Object.values(PERSONAL_DETAILS_FIELD).find(
+      (field) => field === target.name && target !== document.activeElement,
+    );
+    if (autofilledField) trigger(autofilledField);
+  }
+
+  async function submitDetails(details: PersonalDetails): Promise<void> {
     const status = await validateCorporationNumber(details[CORPORATION_NUMBER]);
     if (status !== CORPORATION_NUMBER_STATUS.VALID) {
       setFocus(CORPORATION_NUMBER);
@@ -84,9 +103,15 @@ export function PersonalDetailsStep({ onComplete }: PersonalDetailsStepProps) {
     }
   }
 
-  function onSubmit(event: SubmitEvent<HTMLFormElement>) {
+  async function onSubmit(event: SubmitEvent<HTMLFormElement>): Promise<void> {
+    // The button blocks repeat clicks itself, but a POST shouldn't rely on that.
+    if (isSubmitting) {
+      event.preventDefault();
+      return;
+    }
+
     setSubmitError(null);
-    return handleSubmit(submitDetails, () =>
+    await handleSubmit(submitDetails, () =>
       // Other fields are invalid, but the corporation number still gets
       // checked so that every message appears at once.
       validateCorporationNumber(getValues(CORPORATION_NUMBER)),
@@ -94,7 +119,12 @@ export function PersonalDetailsStep({ onComplete }: PersonalDetailsStepProps) {
   }
 
   return (
-    <form method="post" noValidate onSubmit={onSubmit}>
+    <form
+      method="post"
+      noValidate
+      onSubmit={onSubmit}
+      onChange={handleFormChange}
+    >
       <div className="grid gap-x-5 sm:grid-cols-2">
         <FormField
           label="First Name"
@@ -128,15 +158,16 @@ export function PersonalDetailsStep({ onComplete }: PersonalDetailsStepProps) {
         required
         readOnly={isSubmitting}
         error={errors[CORPORATION_NUMBER]?.message ?? checkError}
+        isInvalid={Boolean(errors[CORPORATION_NUMBER]) || isCheckInvalid}
         status={isChecking ? "Checking..." : undefined}
-        messageClassName="min-h-10 sm:min-h-5"
+        messageClassName="min-h-8 sm:min-h-4"
         {...register(CORPORATION_NUMBER, corporationNumberOptions)}
       />
       <Button
         type="submit"
         disabled={isSubmitting}
         focusableWhenDisabled
-        className="mt-3.5 h-11.5 w-full rounded-[10px] font-normal aria-disabled:opacity-50"
+        className="mt-5.5 h-11.5 w-full rounded-[10px] font-normal aria-disabled:opacity-50"
       >
         {isSubmitting ? (
           "Submitting..."

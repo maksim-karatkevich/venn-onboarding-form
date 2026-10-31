@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactElement } from "react";
 
-export function OnboardingConfirmation() {
+export function OnboardingConfirmation(): ReactElement {
   const messageRef = useRef<HTMLParagraphElement>(null);
 
   // The Submit button that had focus is gone, so focus moves here to keep

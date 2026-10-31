@@ -15,13 +15,23 @@ const ERROR_MESSAGES: Partial<Record<CorporationNumberCheckStatus, string>> = {
     "We couldn't verify this number right now. Please click Submit to try again.",
 };
 
-export function useCorporationNumberValidation() {
+type CorporationNumberValidation = {
+  isChecking: boolean;
+  isInvalid: boolean;
+  error: string | undefined;
+  validateCorporationNumber: (
+    value: string,
+  ) => Promise<CorporationNumberStatus | undefined>;
+  reset: () => void;
+};
+
+export function useCorporationNumberValidation(): CorporationNumberValidation {
   // One entry per number: a running check and a finished one are the same
   // promise, so callers reuse it either way.
   const checks = useRef(new Map<string, Promise<CorporationNumberStatus>>());
   const [check, setCheck] = useState<CorporationNumberCheck | null>(null);
 
-  function getOrStartCheck(number: string) {
+  function getOrStartCheck(number: string): Promise<CorporationNumberStatus> {
     const existingCheck = checks.current.get(number);
     if (existingCheck) return existingCheck;
 
@@ -37,7 +47,9 @@ export function useCorporationNumberValidation() {
   }
 
   /** Used on blur and on submit. Resolves to undefined if the format is wrong, without calling the API. */
-  async function validateCorporationNumber(value: string) {
+  async function validateCorporationNumber(
+    value: string,
+  ): Promise<CorporationNumberStatus | undefined> {
     const parsed =
       personalDetailsSchema.shape[
         PERSONAL_DETAILS_FIELD.CORPORATION_NUMBER
@@ -55,12 +67,13 @@ export function useCorporationNumberValidation() {
     return status;
   }
 
-  function reset() {
+  function reset(): void {
     setCheck(null);
   }
 
   return {
     isChecking: check?.status === CORPORATION_NUMBER_STATUS.CHECKING,
+    isInvalid: check?.status === CORPORATION_NUMBER_STATUS.INVALID,
     error: check ? ERROR_MESSAGES[check.status] : undefined,
     validateCorporationNumber,
     reset,

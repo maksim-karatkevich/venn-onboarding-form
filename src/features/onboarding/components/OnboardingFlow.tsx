@@ -1,13 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactElement } from "react";
 import { OnboardingConfirmation } from "./OnboardingConfirmation";
+import { OnboardingLayout } from "./OnboardingLayout";
 import { PersonalDetailsStep } from "./PersonalDetailsStep";
 
-export function OnboardingFlow() {
+export function OnboardingFlow(): ReactElement {
   const [isComplete, setIsComplete] = useState(false);
 
-  if (isComplete) return <OnboardingConfirmation />;
-
-  return <PersonalDetailsStep onComplete={() => setIsComplete(true)} />;
+  return (
+    <OnboardingLayout currentStep={1}>
+      {isComplete ? (
+        <OnboardingConfirmation />
+      ) : (
+        <PersonalDetailsStep onComplete={() => setIsComplete(true)} />
+      )}
+    </OnboardingLayout>
+  );
 }

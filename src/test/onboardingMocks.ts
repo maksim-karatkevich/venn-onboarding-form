@@ -22,13 +22,15 @@ export const submitSuccessResponse = () => HttpResponse.text("OK");
 
 /** Answers with `respond` and records the JSON body of every request received. */
 export function mockSubmit(
-  respond: () => Response | Promise<Response> = submitSuccessResponse,
+  respond: (
+    request: Request,
+  ) => Response | Promise<Response> = submitSuccessResponse,
 ) {
   const requestBodies: unknown[] = [];
   server.use(
     http.post(`${API_BASE_URL}/profile-details`, async ({ request }) => {
       requestBodies.push(await request.json());
-      return respond();
+      return respond(request);
     }),
   );
   return requestBodies;

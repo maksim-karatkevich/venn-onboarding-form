@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { PersonalDetailsStep } from "./PersonalDetailsStep";
@@ -69,11 +69,46 @@ describe("PersonalDetailsStep", () => {
     await user.type(phone, "123");
     await user.tab();
 
-    await screen.findByText("Enter a Canadian number like +13062776103");
+    const error = await screen.findByText(
+      "Enter a Canadian number: +13062776103",
+    );
+    expect(error).toHaveAttribute("aria-live", "polite");
     expect(phone).toHaveAttribute("aria-invalid", "true");
     expect(phone).toHaveAccessibleDescription(
-      "Enter a Canadian number like +13062776103",
+      "Enter a Canadian number: +13062776103",
     );
+  });
+
+  it("keeps validating on blur, not on every keystroke, after a submit", async () => {
+    const user = setup();
+    const firstName = screen.getByLabelText("First Name");
+
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+    await screen.findByText("First name is required");
+
+    await user.type(firstName, "Hello");
+    // Gives validation time to run, if it were wrongly triggered by typing.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.getByText("First name is required")).toBeInTheDocument();
+
+    await user.tab();
+    await expect
+      .poll(() => screen.queryByText("First name is required"))
+      .not.toBeInTheDocument();
+  });
+
+  it("validates fields changed by autofill, which never get focus or blur", async () => {
+    const user = setup();
+    await user.click(screen.getByLabelText("First Name"));
+
+    fireEvent.change(screen.getByLabelText("Phone Number"), {
+      target: { value: "+12025550123" },
+    });
+
+    expect(
+      await screen.findByText("Enter a Canadian number: +13062776103"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Last name is required")).not.toBeInTheDocument();
   });
 
   it("clears the error once the corrected value is blurred", async () => {

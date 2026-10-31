@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -56,6 +56,21 @@ describe("OnboardingFlow submit", () => {
     expect(confirmation).toHaveFocus();
     expect(requestBodies).toEqual([SUBMITTED_DETAILS]);
     expect(screen.queryByLabelText("First Name")).not.toBeInTheDocument();
+  });
+
+  it("sends the body as JSON", async () => {
+    mockCheck(validResponse);
+    let contentType: string | null = null;
+    mockSubmit((request) => {
+      contentType = request.headers.get("Content-Type");
+      return submitSuccessResponse();
+    });
+    const user = await setup();
+
+    await user.click(submitButton());
+
+    await screen.findByText(CONFIRMATION);
+    expect(contentType).toBe("application/json");
   });
 
   it("posts trimmed values", async () => {
@@ -254,6 +269,21 @@ describe("OnboardingFlow submit", () => {
       expect(await screen.findByRole("alert")).toHaveTextContent(GENERIC_ERROR);
     });
 
+    it("clears the message when a field is edited", async () => {
+      mockCheck(validResponse);
+      mockSubmit(() =>
+        HttpResponse.json({ message: "Invalid phone number" }, { status: 400 }),
+      );
+      const user = await setup();
+
+      await user.click(submitButton());
+      await screen.findByRole("alert");
+
+      await user.type(screen.getByLabelText("Phone Number"), "1");
+
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+
     it("keeps focus on the button throughout, so Enter can retry", async () => {
       mockCheck(validResponse);
       const pendingSubmit = Promise.withResolvers<Response>();
@@ -350,6 +380,21 @@ describe("OnboardingFlow submit", () => {
 
       await user.dblClick(submitButton());
       await waitFor(() => expect(requestBodies).toHaveLength(1));
+
+      pendingSubmit.resolve(submitSuccessResponse());
+      await screen.findByText(CONFIRMATION);
+      expect(requestBodies).toHaveLength(1);
+    });
+
+    it("ignores a submit event that gets past the button", async () => {
+      const { user, pendingSubmit, requestBodies } = await setupPendingSubmit();
+
+      await user.click(submitButton());
+      await waitFor(() => expect(requestBodies).toHaveLength(1));
+
+      fireEvent.submit(document.querySelector("form")!);
+      // Gives a second POST time to reach the mock, if one were sent.
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       pendingSubmit.resolve(submitSuccessResponse());
       await screen.findByText(CONFIRMATION);

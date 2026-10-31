@@ -4,7 +4,7 @@ An onboarding form built with Next.js, React Hook Form and Zod.
 
 ## Getting started
 
-Requires Node.js 24.15+ (see `.nvmrc`).
+Requires Node.js 24.15+. Run `nvm use` or `fnm use` to switch to it (see `.nvmrc`).
 
 ```bash
 npm install
@@ -48,7 +48,7 @@ A pre-commit hook checks formatting, lint and types on every commit.
 
 **Design**
 
-- "Step 1 of 5" is intentionally left out, because only one step exists and the indicator would promise steps that aren't there.
+- "Step 1 of 5" matches the design, and the total of 5 comes from it. Only step 1 is built, so the confirmation appears right after it.
 - The design is a static image of one state, so colours are approximate. Focus, loading, mobile, server-error and confirmation states are my own interpretation.
 - "Invalid Corporation Number" uses the design's wording rather than the API's.
 - After a 200, a confirmation view appears on the same page. The spec doesn't say what should happen here.
@@ -95,6 +95,6 @@ I reviewed each step before committing it. Tests were checked by deliberately br
 - **CI:** run the checks and tests on every push. The pre-commit hook can be skipped, and CI can't.
 - **Duplicate submit protection:** an idempotency key on the POST, which needs backend support, so a retry after a timeout can't submit twice.
 - **Saved progress:** a server-side way to resume, which needs an API that returns saved data.
-- **More steps:** the step indicator, Back navigation, and form values held in the parent.
+- **More steps:** Back navigation, form values held in the parent, and a step indicator that follows the current step.
 - **Field-level server errors:** the 400 response names no field today, so a `field` property from the API would let errors appear under the right input.
 - **Browser tests:** a small Playwright test for the main flow. The current tests fake the network, so they wouldn't notice an API change.

@@ -24,7 +24,7 @@
 }
 
 :root {
-  --background: #f4f4f4;
+  --background: #f8f8f8;
   --foreground: #000000;
   --card: #ffffff;
   --primary: #000000;
@@ -35,8 +35,8 @@
   --muted-foreground: #6b6b6b;
   /* Slightly darker than the design's pure red, which is below 4.5:1 on white. */
   --destructive: #e00000;
-  --border: #e5e5e5;
-  --input: #d9dbdf;
+  --border: #e0e0e0;
+  --input: #d6d6d6;
   --ring: #000000;
   --radius: 0.625rem;
 }

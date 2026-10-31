@@ -145,6 +145,21 @@ describe("PersonalDetailsStep corporation number check", () => {
     expect(requestedUrls).toHaveLength(1);
   });
 
+  it("clears a format error as soon as the number is edited", async () => {
+    mockCheck(validResponse);
+    const { user, input } = setup();
+
+    await user.type(input, "12345678");
+    await user.tab();
+    await screen.findByText("Corporation number must be 9 characters");
+
+    await user.type(input, "9");
+
+    expect(
+      screen.queryByText("Corporation number must be 9 characters"),
+    ).not.toBeInTheDocument();
+  });
+
   it("clears the error as soon as the number is edited", async () => {
     mockCheck(invalidResponse);
     const { user, input } = setup();
@@ -191,6 +206,8 @@ describe("PersonalDetailsStep corporation number check", () => {
 
       expect(await screen.findByText(UNAVAILABLE_MESSAGE)).toBeInTheDocument();
       expect(screen.queryByText(INVALID_MESSAGE)).not.toBeInTheDocument();
+      expect(input).not.toHaveAttribute("aria-invalid");
+      expect(input).toHaveAccessibleDescription(UNAVAILABLE_MESSAGE);
     });
 
     it("treats a timeout as unavailable", async () => {

@@ -7,7 +7,7 @@ const CORPORATION_NUMBER_LENGTH = 9;
 // libphonenumber-js accepts punctuation such as "+1 (306) 277-6103", which the spec forbids.
 const PHONE_FORMAT = /^\+1\d{10}$/;
 
-function isCanadianPhoneNumber(value: string) {
+function isCanadianPhoneNumber(value: string): boolean {
   return (
     PHONE_FORMAT.test(value) &&
     // +1 is shared with the US, so the country has to be resolved from the area code.
@@ -15,7 +15,7 @@ function isCanadianPhoneNumber(value: string) {
   );
 }
 
-function nameField(label: string) {
+function nameField(label: string): z.ZodString {
   return z
     .string()
     .trim()
@@ -30,7 +30,7 @@ export const personalDetailsSchema = z.object({
     .string()
     .trim()
     .min(1, "Phone number is required")
-    .refine(isCanadianPhoneNumber, "Enter a Canadian number like +13062776103"),
+    .refine(isCanadianPhoneNumber, "Enter a Canadian number: +13062776103"),
   [PERSONAL_DETAILS_FIELD.CORPORATION_NUMBER]: z
     .string()
     .trim()

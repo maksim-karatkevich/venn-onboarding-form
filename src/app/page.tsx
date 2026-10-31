@@ -1,10 +1,6 @@
+import type { ReactElement } from "react";
 import { OnboardingFlow } from "@/features/onboarding/components/OnboardingFlow";
-import { OnboardingLayout } from "@/features/onboarding/components/OnboardingLayout";
 
-export default function Home() {
-  return (
-    <OnboardingLayout>
-      <OnboardingFlow />
-    </OnboardingLayout>
-  );
+export default function Home(): ReactElement {
+  return <OnboardingFlow />;
 }

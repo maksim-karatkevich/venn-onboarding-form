@@ -61,7 +61,7 @@ describe("personalDetailsSchema", () => {
       ["an invalid area code", "+11062776103"],
     ])("rejects %s", (_description, phone) => {
       expect(firstError({ phone })).toBe(
-        "Enter a Canadian number like +13062776103",
+        "Enter a Canadian number: +13062776103",
       );
     });
   });
