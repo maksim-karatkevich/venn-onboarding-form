@@ -4,7 +4,7 @@ An onboarding form built with Next.js, React Hook Form and Zod.
 
 ## Getting started
 
-Requires Node.js 20.19+ or 22.13+.
+Requires Node.js 24.15+ (see `.nvmrc`).
 
 ```bash
 npm install
@@ -17,6 +17,7 @@ Then open http://localhost:3000.
 | ---------------------- | --------------------------- |
 | `npm run dev`          | Start the dev server        |
 | `npm run build`        | Create a production build   |
+| `npm test`             | Run the tests               |
 | `npm run lint`         | Run ESLint                  |
 | `npm run typecheck`    | Run the TypeScript compiler |
 | `npm run format`       | Format files with Prettier  |
