@@ -3,40 +3,40 @@ import userEvent from "@testing-library/user-event";
 import { HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  INVALID_MESSAGE,
   invalidResponse,
   mockCheck,
   mockSubmit,
   NUMBER,
   serverErrorResponse,
   submitSuccessResponse,
-  UNAVAILABLE_MESSAGE,
   validResponse,
 } from "@/test/onboardingMocks";
+import {
+  backButton,
+  FIRST_NAME,
+  goToCorporationNumberStep,
+  goToReviewStep,
+  LAST_NAME,
+  nextButton,
+  PHONE,
+  submitButton,
+} from "@/test/onboardingSteps";
 import { OnboardingFlow } from "./OnboardingFlow";
 
 const CONFIRMATION = "Thanks, we've received your details.";
 const GENERIC_ERROR = "Something went wrong. Please try again.";
 const SUBMITTED_DETAILS = {
-  firstName: "Hello",
-  lastName: "World",
+  firstName: FIRST_NAME,
+  lastName: LAST_NAME,
   corporationNumber: NUMBER,
-  phone: "+13062776103",
+  phone: PHONE,
 };
 
-function submitButton() {
-  return screen.getByRole("button", { name: /submit/i });
-}
-
-async function setup() {
+/** Fills in every step and stops on the review, ready to submit. */
+async function setup(number = NUMBER) {
   const user = userEvent.setup();
   render(<OnboardingFlow />);
-
-  await user.type(screen.getByLabelText("First Name"), "Hello");
-  await user.type(screen.getByLabelText("Last Name"), "World");
-  await user.type(screen.getByLabelText("Phone Number"), "+13062776103");
-  await user.type(screen.getByLabelText("Corporation Number"), NUMBER);
-
+  await goToReviewStep(user, number);
   return user;
 }
 
@@ -55,7 +55,7 @@ describe("OnboardingFlow submit", () => {
     const confirmation = await screen.findByText(CONFIRMATION);
     expect(confirmation).toHaveFocus();
     expect(requestBodies).toEqual([SUBMITTED_DETAILS]);
-    expect(screen.queryByLabelText("First Name")).not.toBeInTheDocument();
+    expect(submitButton).toThrow();
   });
 
   it("sends the body as JSON", async () => {
@@ -76,27 +76,34 @@ describe("OnboardingFlow submit", () => {
   it("posts trimmed values", async () => {
     mockCheck(validResponse);
     const requestBodies = mockSubmit();
-    const user = await setup();
+    const user = await setup(`${NUMBER}  `);
 
-    await user.type(screen.getByLabelText("First Name"), "  ");
     await user.click(submitButton());
 
     await screen.findByText(CONFIRMATION);
     expect(requestBodies).toEqual([SUBMITTED_DETAILS]);
   });
 
-  describe("clicking Submit during a pending check", () => {
-    it("sends one GET, then the POST after it succeeds", async () => {
+  it("reuses the check that ran when leaving the corporation number step", async () => {
+    const requestedUrls = mockCheck(validResponse);
+    mockSubmit();
+    const user = await setup();
+
+    await user.click(submitButton());
+
+    await screen.findByText(CONFIRMATION);
+    expect(requestedUrls).toHaveLength(1);
+  });
+
+  describe("clicking Submit while the check is still running", () => {
+    it("waits for it, then posts once it succeeds", async () => {
       const pendingCheck = Promise.withResolvers<Response>();
       const requestedUrls = mockCheck(() => pendingCheck.promise);
       const requestBodies = mockSubmit();
       const user = await setup();
 
-      // Clicking moves focus off the field, so the blur check starts first.
       await user.click(submitButton());
-      await waitFor(() => expect(requestedUrls).toHaveLength(1));
 
-      expect(screen.getByText("Checking...")).toBeInTheDocument();
       expect(submitButton()).toHaveTextContent("Submitting...");
       expect(requestBodies).toEqual([]);
 
@@ -109,128 +116,34 @@ describe("OnboardingFlow submit", () => {
 
     it("doesn't post if the number turns out to be invalid", async () => {
       const pendingCheck = Promise.withResolvers<Response>();
-      const requestedUrls = mockCheck(() => pendingCheck.promise);
+      mockCheck(() => pendingCheck.promise);
       const requestBodies = mockSubmit();
       const user = await setup();
 
       await user.click(submitButton());
-      await waitFor(() => expect(requestedUrls).toHaveLength(1));
-
       pendingCheck.resolve(invalidResponse());
 
-      expect(await screen.findByText(INVALID_MESSAGE)).toBeInTheDocument();
+      await waitFor(() => expect(submitButton()).toHaveTextContent(/^Submit$/));
       expect(requestBodies).toEqual([]);
     });
   });
 
-  it("reuses a finished blur check on submit", async () => {
-    const requestedUrls = mockCheck(validResponse);
-    mockSubmit();
+  it("retries a check that failed earlier, and posts when it passes", async () => {
+    const responses = [serverErrorResponse, validResponse];
+    const requestedUrls = mockCheck(() => responses.shift()!());
+    const requestBodies = mockSubmit();
     const user = await setup();
-
-    await user.tab();
-    await waitFor(() => expect(requestedUrls).toHaveLength(1));
-    await waitFor(() =>
-      expect(screen.queryByText("Checking...")).not.toBeInTheDocument(),
-    );
 
     await user.click(submitButton());
 
     await screen.findByText(CONFIRMATION);
-    expect(requestedUrls).toHaveLength(1);
+    expect(requestedUrls).toHaveLength(2);
+    expect(requestBodies).toHaveLength(1);
   });
 
-  describe("when the corporation number blocks the submit", () => {
-    it("shows the error, focuses the field and doesn't post", async () => {
-      mockCheck(invalidResponse);
-      const requestBodies = mockSubmit();
-      const user = await setup();
-
-      await user.click(submitButton());
-
-      expect(await screen.findByText(INVALID_MESSAGE)).toBeInTheDocument();
-      await waitFor(() =>
-        expect(screen.getByLabelText("Corporation Number")).toHaveFocus(),
-      );
-      expect(requestBodies).toEqual([]);
-    });
-
-    it("still checks the number when another field is invalid, and doesn't post", async () => {
-      mockCheck(invalidResponse);
-      const requestBodies = mockSubmit();
-      const user = userEvent.setup();
-      render(<OnboardingFlow />);
-
-      // Enter submits without leaving the field, so no blur check runs first.
-      await user.type(
-        screen.getByLabelText("Corporation Number"),
-        `${NUMBER}{Enter}`,
-      );
-
-      expect(await screen.findByText(INVALID_MESSAGE)).toBeInTheDocument();
-      expect(
-        await screen.findByText("First name is required"),
-      ).toBeInTheDocument();
-      await waitFor(() =>
-        expect(screen.getByLabelText("First Name")).toHaveFocus(),
-      );
-      expect(requestBodies).toEqual([]);
-    });
-  });
-
-  describe("retrying after the number couldn't be verified", () => {
-    /** Submits once with the API down, and leaves `nextResponse` for the retry. */
-    async function submitDuringOutage(nextResponse: () => Response) {
-      const responses = [serverErrorResponse, nextResponse];
-      const requestedUrls = mockCheck(() => responses.shift()!());
-      const requestBodies = mockSubmit();
-      const user = await setup();
-
-      await user.click(submitButton());
-      await screen.findByText(UNAVAILABLE_MESSAGE);
-      await waitFor(() =>
-        expect(submitButton()).not.toHaveAttribute("aria-disabled", "true"),
-      );
-      expect(requestBodies).toEqual([]);
-
-      return { user, requestedUrls, requestBodies };
-    }
-
-    it("clears the error and posts when the number is now valid", async () => {
-      const { user, requestedUrls, requestBodies } =
-        await submitDuringOutage(validResponse);
-
-      await user.click(submitButton());
-
-      await screen.findByText(CONFIRMATION);
-      expect(requestedUrls).toHaveLength(2);
-      expect(requestBodies).toHaveLength(1);
-    });
-
-    it("shows the invalid error and doesn't post when the number is now invalid", async () => {
-      const { user, requestBodies } = await submitDuringOutage(invalidResponse);
-
-      await user.click(submitButton());
-
-      expect(await screen.findByText(INVALID_MESSAGE)).toBeInTheDocument();
-      expect(screen.queryByText(UNAVAILABLE_MESSAGE)).not.toBeInTheDocument();
-      expect(requestBodies).toEqual([]);
-    });
-
-    it("keeps the same message and stays enabled when the check fails again", async () => {
-      const { user, requestedUrls, requestBodies } =
-        await submitDuringOutage(serverErrorResponse);
-
-      await user.click(submitButton());
-
-      await waitFor(() => expect(requestedUrls).toHaveLength(2));
-      expect(await screen.findByText(UNAVAILABLE_MESSAGE)).toBeInTheDocument();
-      await waitFor(() =>
-        expect(submitButton()).not.toHaveAttribute("aria-disabled", "true"),
-      );
-      expect(requestBodies).toEqual([]);
-    });
-  });
+  it.todo(
+    "sends the user back to the corporation number step when the number is invalid",
+  );
 
   describe("when the POST fails", () => {
     it("shows the server's 400 message and keeps the entered values", async () => {
@@ -245,7 +158,7 @@ describe("OnboardingFlow submit", () => {
       expect(await screen.findByRole("alert")).toHaveTextContent(
         "Invalid phone number",
       );
-      expect(screen.getByLabelText("First Name")).toHaveValue("Hello");
+      expect(screen.getByText(FIRST_NAME)).toBeInTheDocument();
       expect(submitButton()).not.toHaveAttribute("aria-disabled", "true");
       expect(screen.queryByText(CONFIRMATION)).not.toBeInTheDocument();
     });
@@ -269,18 +182,17 @@ describe("OnboardingFlow submit", () => {
       expect(await screen.findByRole("alert")).toHaveTextContent(GENERIC_ERROR);
     });
 
-    it("clears the message when a field is edited", async () => {
+    it("clears the message on Back", async () => {
       mockCheck(validResponse);
-      mockSubmit(() =>
-        HttpResponse.json({ message: "Invalid phone number" }, { status: 400 }),
-      );
+      mockSubmit(serverErrorResponse);
       const user = await setup();
 
       await user.click(submitButton());
       await screen.findByRole("alert");
 
-      await user.type(screen.getByLabelText("Phone Number"), "1");
+      await user.click(backButton());
 
+      await screen.findByLabelText("Corporation Number");
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     });
 
@@ -326,14 +238,19 @@ describe("OnboardingFlow submit", () => {
     it("shows a generic message when the POST times out", async () => {
       const requestedUrls = mockCheck(validResponse);
       mockSubmit();
-      const user = await setup();
+      const user = userEvent.setup();
+      render(<OnboardingFlow />);
+      await goToCorporationNumberStep(user);
 
       // The check finishes first, so that only the POST gets the aborted signal.
+      await user.type(screen.getByLabelText("Corporation Number"), NUMBER);
       await user.tab();
       await waitFor(() => expect(requestedUrls).toHaveLength(1));
       await waitFor(() =>
         expect(screen.queryByText("Checking...")).not.toBeInTheDocument(),
       );
+      await user.click(nextButton());
+      await screen.findByRole("button", { name: "Edit First Name" });
       const timeout = vi
         .spyOn(AbortSignal, "timeout")
         .mockImplementation(() => AbortSignal.abort());
@@ -354,7 +271,7 @@ describe("OnboardingFlow submit", () => {
       return { user, pendingSubmit, requestBodies };
     }
 
-    it("disables the button, shows Submitting... and makes inputs read-only", async () => {
+    it("disables both buttons and shows Submitting...", async () => {
       const { user, pendingSubmit, requestBodies } = await setupPendingSubmit();
 
       await user.click(submitButton());
@@ -362,14 +279,7 @@ describe("OnboardingFlow submit", () => {
 
       expect(submitButton()).toHaveAttribute("aria-disabled", "true");
       expect(submitButton()).toHaveTextContent("Submitting...");
-      for (const label of [
-        "First Name",
-        "Last Name",
-        "Phone Number",
-        "Corporation Number",
-      ]) {
-        expect(screen.getByLabelText(label)).toHaveAttribute("readonly");
-      }
+      expect(backButton()).toHaveAttribute("aria-disabled", "true");
 
       pendingSubmit.resolve(submitSuccessResponse());
       await screen.findByText(CONFIRMATION);

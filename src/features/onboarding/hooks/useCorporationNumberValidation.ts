@@ -15,7 +15,7 @@ const ERROR_MESSAGES: Partial<Record<CorporationNumberCheckStatus, string>> = {
     "We couldn't verify this number right now. Please click Submit to try again.",
 };
 
-type CorporationNumberValidation = {
+export type CorporationNumberValidation = {
   isChecking: boolean;
   isInvalid: boolean;
   error: string | undefined;

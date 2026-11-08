@@ -3,17 +3,23 @@
 import { useState, type ReactElement } from "react";
 import { OnboardingConfirmation } from "./OnboardingConfirmation";
 import { OnboardingLayout } from "./OnboardingLayout";
-import { PersonalDetailsStep } from "./PersonalDetailsStep";
+import { OnboardingForm } from "./OnboardingForm";
+import { useFormNavigation } from "../hooks/useStepNavigation";
+import { STEP_ORDER } from "../types";
 
 export function OnboardingFlow(): ReactElement {
   const [isComplete, setIsComplete] = useState(false);
-
+  const navigation = useFormNavigation();
+  const stepIndex = STEP_ORDER.indexOf(navigation.currentStep) + 1;
   return (
-    <OnboardingLayout currentStep={1}>
+    <OnboardingLayout currentStep={stepIndex}>
       {isComplete ? (
         <OnboardingConfirmation />
       ) : (
-        <PersonalDetailsStep onComplete={() => setIsComplete(true)} />
+        <OnboardingForm
+          navigation={navigation}
+          onComplete={() => setIsComplete(true)}
+        />
       )}
     </OnboardingLayout>
   );

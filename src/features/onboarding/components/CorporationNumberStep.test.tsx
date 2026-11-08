@@ -12,15 +12,19 @@ import {
   UNAVAILABLE_MESSAGE,
   validResponse,
 } from "@/test/onboardingMocks";
+import {
+  backButton,
+  goToCorporationNumberStep,
+  nextButton,
+} from "@/test/onboardingSteps";
 import { API_BASE_URL } from "../api/config";
-import { PersonalDetailsStep } from "./PersonalDetailsStep";
+import { OnboardingFlow } from "./OnboardingFlow";
 
-function setup() {
-  render(<PersonalDetailsStep onComplete={() => undefined} />);
-  return {
-    user: userEvent.setup(),
-    input: screen.getByLabelText("Corporation Number"),
-  };
+async function setup() {
+  render(<OnboardingFlow />);
+  const user = userEvent.setup();
+  await goToCorporationNumberStep(user);
+  return { user, input: screen.getByLabelText("Corporation Number") };
 }
 
 async function waitForCheckToFinish() {
@@ -29,7 +33,7 @@ async function waitForCheckToFinish() {
   );
 }
 
-describe("PersonalDetailsStep corporation number check", () => {
+describe("CorporationNumberStep check", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -37,7 +41,7 @@ describe("PersonalDetailsStep corporation number check", () => {
   it("shows Checking... while the request runs, then no error for a valid number", async () => {
     const pendingResponse = Promise.withResolvers<Response>();
     const requestedUrls = mockCheck(() => pendingResponse.promise);
-    const { user, input } = setup();
+    const { user, input } = await setup();
 
     await user.type(input, NUMBER);
     await user.tab();
@@ -55,7 +59,7 @@ describe("PersonalDetailsStep corporation number check", () => {
 
   it("shows an error for an invalid number", async () => {
     mockCheck(invalidResponse);
-    const { user, input } = setup();
+    const { user, input } = await setup();
 
     await user.type(input, NUMBER);
     await user.tab();
@@ -67,7 +71,7 @@ describe("PersonalDetailsStep corporation number check", () => {
 
   it("treats a 200 with valid: false as invalid", async () => {
     mockCheck(() => HttpResponse.json({ valid: false }));
-    const { user, input } = setup();
+    const { user, input } = await setup();
 
     await user.type(input, NUMBER);
     await user.tab();
@@ -77,7 +81,7 @@ describe("PersonalDetailsStep corporation number check", () => {
 
   it("shows a length error and makes no request when it isn't 9 characters", async () => {
     const requestedUrls = mockCheck(validResponse);
-    const { user, input } = setup();
+    const { user, input } = await setup();
 
     await user.type(input, "12345678");
     await user.tab();
@@ -90,7 +94,7 @@ describe("PersonalDetailsStep corporation number check", () => {
 
   it("trims the number and encodes it in the URL", async () => {
     const requestedUrls = mockCheck(validResponse);
-    const { user, input } = setup();
+    const { user, input } = await setup();
 
     await user.type(input, " abcd/1234 ");
     await user.tab();
@@ -105,7 +109,7 @@ describe("PersonalDetailsStep corporation number check", () => {
     const requestedUrls = mockCheck((number) =>
       number === NUMBER ? invalidResponse() : validResponse(),
     );
-    const { user, input } = setup();
+    const { user, input } = await setup();
 
     await user.type(input, NUMBER);
     await user.tab();
@@ -128,7 +132,7 @@ describe("PersonalDetailsStep corporation number check", () => {
   it("waits for a running check instead of starting another request", async () => {
     const pendingResponse = Promise.withResolvers<Response>();
     const requestedUrls = mockCheck(() => pendingResponse.promise);
-    const { user, input } = setup();
+    const { user, input } = await setup();
 
     await user.type(input, NUMBER);
     await user.tab();
@@ -147,7 +151,7 @@ describe("PersonalDetailsStep corporation number check", () => {
 
   it("clears a format error as soon as the number is edited", async () => {
     mockCheck(validResponse);
-    const { user, input } = setup();
+    const { user, input } = await setup();
 
     await user.type(input, "12345678");
     await user.tab();
@@ -162,7 +166,7 @@ describe("PersonalDetailsStep corporation number check", () => {
 
   it("clears the error as soon as the number is edited", async () => {
     mockCheck(invalidResponse);
-    const { user, input } = setup();
+    const { user, input } = await setup();
 
     await user.type(input, NUMBER);
     await user.tab();
@@ -173,20 +177,21 @@ describe("PersonalDetailsStep corporation number check", () => {
     expect(screen.queryByText(INVALID_MESSAGE)).not.toBeInTheDocument();
   });
 
-  it("doesn't check when other fields are blurred", async () => {
-    const requestedUrls = mockCheck(validResponse);
-    const { user, input } = setup();
+  it("keeps saved checks when the user goes back and returns", async () => {
+    const requestedUrls = mockCheck(invalidResponse);
+    const { user, input } = await setup();
 
     await user.type(input, NUMBER);
-    await user.click(screen.getByLabelText("First Name"));
-    await waitFor(() => expect(requestedUrls).toHaveLength(1));
-    await waitForCheckToFinish();
-
-    await user.click(screen.getByLabelText("Last Name"));
-    await user.click(screen.getByLabelText("Phone Number"));
     await user.tab();
-    await screen.findByText("Phone number is required");
+    await screen.findByText(INVALID_MESSAGE);
 
+    await user.click(backButton());
+    await screen.findByLabelText("Phone Number");
+    await user.click(nextButton());
+    await user.click(await screen.findByLabelText("Corporation Number"));
+    await user.tab();
+
+    expect(await screen.findByText(INVALID_MESSAGE)).toBeInTheDocument();
     expect(requestedUrls).toHaveLength(1);
   });
 
@@ -199,7 +204,7 @@ describe("PersonalDetailsStep corporation number check", () => {
       ["a body without valid", () => HttpResponse.json({})],
     ])("doesn't call %s invalid", async (_description, respond) => {
       mockCheck(respond);
-      const { user, input } = setup();
+      const { user, input } = await setup();
 
       await user.type(input, NUMBER);
       await user.tab();
@@ -215,7 +220,7 @@ describe("PersonalDetailsStep corporation number check", () => {
         .spyOn(AbortSignal, "timeout")
         .mockImplementation(() => AbortSignal.abort());
       mockCheck(validResponse);
-      const { user, input } = setup();
+      const { user, input } = await setup();
 
       await user.type(input, NUMBER);
       await user.tab();
@@ -227,7 +232,7 @@ describe("PersonalDetailsStep corporation number check", () => {
     it("doesn't save the failure, so the next attempt calls the API again", async () => {
       const responses = [serverErrorResponse(), validResponse()];
       const requestedUrls = mockCheck(() => responses.shift()!);
-      const { user, input } = setup();
+      const { user, input } = await setup();
 
       await user.type(input, NUMBER);
       await user.tab();
@@ -251,7 +256,7 @@ describe("PersonalDetailsStep corporation number check", () => {
       mockCheck((number) =>
         number === NUMBER ? firstResponse.promise : validResponse(),
       );
-      const { user, input } = setup();
+      const { user, input } = await setup();
 
       await user.type(input, NUMBER);
       await user.tab();
@@ -273,7 +278,7 @@ describe("PersonalDetailsStep corporation number check", () => {
     it("ignores a response for a number that has since been edited", async () => {
       const pendingResponse = Promise.withResolvers<Response>();
       mockCheck(() => pendingResponse.promise);
-      const { user, input } = setup();
+      const { user, input } = await setup();
 
       await user.type(input, NUMBER);
       await user.tab();
